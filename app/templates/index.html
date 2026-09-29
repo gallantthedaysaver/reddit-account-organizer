@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reddit Account Organizer</title><link rel="stylesheet" href="/static/style.css"></head><body>
+<main><h1>Reddit Account Organizer <small>v0.1.0</small></h1>
+{% if not logged_in %}<p>Connect your Reddit account to inspect subscriptions and Custom Feeds.</p><a class="button" href="/login">Connect Reddit</a>
+{% else %}<p><b>Mode:</b> {{ 'Read-only' if read_only else 'Changes enabled' }} · <a href="/export.csv">Backup subscriptions CSV</a></p>
+<div class="controls"><button onclick="loadSubs()">Load subscriptions</button><button onclick="analyze()">Analyze activity</button><button onclick="feeds()">Load Custom Feeds</button><input id="filter" placeholder="Filter…" oninput="render()"></div>
+<p id="status"></p><div id="feeds"></div><div class="tablewrap"><table><thead><tr><th>Subreddit</th><th>Members</th><th>Last post (days)</th><th>Posts 7d</th><th>Posts 30d</th><th>NSFW</th></tr></thead><tbody id="rows"></tbody></table></div>
+{% endif %}</main><script>let data=[];const st=x=>document.getElementById('status').textContent=x;
+async function loadSubs(){st('Loading subscriptions…');let r=await fetch('/api/subscriptions');data=await r.json();render();st(`${data.length} subscriptions loaded.`)}
+async function analyze(){st('Analyzing. This can take a while because Reddit is rate-limited…');let r=await fetch('/api/analyze');data=await r.json();render();st(`${data.length} communities analyzed.`)}
+async function feeds(){st('Loading Custom Feeds…');let r=await fetch('/api/custom-feeds');let j=await r.json();document.getElementById('feeds').innerHTML=r.ok?j.map(f=>`<details><summary>${f.name} (${f.subreddits.length})</summary><p>${f.subreddits.join(', ')}</p></details>`).join(''):`<p>${j.error||'Unavailable'}</p>`;st('')}
+function render(){let q=(document.getElementById('filter')?.value||'').toLowerCase();let rows=data.filter(x=>(x.name||'').toLowerCase().includes(q));document.getElementById('rows').innerHTML=rows.map(x=>`<tr><td>r/${x.name}</td><td>${x.subscribers??''}</td><td>${x.days_since_post??''}</td><td>${x.posts_7d??''}</td><td>${x.posts_30d??''}</td><td>${x.over18?'Yes':'No'}</td></tr>`).join('')}</script></body></html>
